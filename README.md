@@ -56,7 +56,7 @@ terminal and press **Ctrl+C**.
 ## Step 6 — First use
 
 1. Paste your API key in the sidebar.
-2. **My profile** tab → paste your CV as plain text and write your criteria → **Save profile**.
+2. **My CV** tab → upload your CV (or paste it) and write what you're looking for.
 3. **Analyse a job** tab → paste a full JD → **Analyse**.
 
 Your CV and tracker are private to your browser tab and clear when you close it. Keep your CV
@@ -70,6 +70,39 @@ GEMINI_API_KEY = "paste-your-key-here"
 
 ---
 
+## Job alerts — see fresh jobs that match your CV
+
+The **Job alerts** tab searches two free job sources, removes duplicates, scores every job
+against your CV, and lists the best matches first, each with an **Open job** link.
+
+**Get the free keys once (about 10 minutes):**
+
+*JSearch* — jobs from LinkedIn, Indeed, Glassdoor and more; 200 free searches a month
+1. Go to **rapidapi.com** and sign up.
+2. Search for **JSearch**, open it, click **Pricing**, subscribe to the free **Basic** plan.
+3. Open the **Endpoints** tab and copy the value shown as **X-RapidAPI-Key**.
+
+*Adzuna* — free; covers India, UK, USA, Australia, Canada (not UAE)
+1. Go to **developer.adzuna.com** and click **Register**.
+2. Open **Dashboard → API Access Details** and copy the **Application ID** and **Application Key**.
+
+Paste them in the sidebar under **Job alert sources**. One source is enough; both gives more jobs.
+
+**Use it:** set up to 5 searches (job title + city + country), pick how recent, click
+**Find jobs**. Each search row uses 1 of your 200 free JSearch searches, so 5 rows once a day
+is about 150 a month. On each job you can **Open job**, **Analyse in detail** (sends it to the
+Analyse tab) or **Add to tracker**.
+
+To save these keys on your laptop too, add these lines to `.streamlit/secrets.toml`:
+```
+JSEARCH_KEY = "your-jsearch-key"
+ADZUNA_APP_ID = "your-adzuna-id"
+ADZUNA_APP_KEY = "your-adzuna-key"
+```
+Never add them on the Streamlit website — visitors would use your quota.
+
+---
+
 ## If something goes wrong
 
 | You see | What it means | Fix |
@@ -79,6 +112,8 @@ GEMINI_API_KEY = "paste-your-key-here"
 | `429` or `RESOURCE_EXHAUSTED` | Free-tier limit hit | Wait a minute, or pick another model in the sidebar |
 | `404` / `model not found` | That model isn't on your key | Pick another model in the sidebar |
 | `API key not valid` | Key copied wrong | Paste it again, no spaces |
+| `JSearch refused your key` | Key wrong, or not subscribed to the free Basic plan | Re-copy the key; check Pricing → Basic is subscribed |
+| `No module named requests` | New library not installed yet | Redo Step 4 |
 
 When stuck, copy the red error text and paste it to Claude.
 
@@ -86,21 +121,24 @@ When stuck, copy the red error text and paste it to Claude.
 
 ## How the code works (read `app.py` alongside this)
 
-The file has 8 numbered sections:
+The file has 9 numbered sections:
 
 1. **Imports** — borrowing libraries: Streamlit (web page), Gemini (AI), pandas (tables),
-   pypdf and python-docx (reading CV files).
-2. **Settings** — model list and tracker columns. Safe to change.
-3. **The answer's shape (`FitReport`)** — the most important AI idea here: *structured output*.
+   requests (fetching jobs), pypdf and python-docx (reading CV files).
+2. **Settings** — models, countries, how many jobs to fetch. Safe to change.
+3. **The answer's shapes** — the most important AI idea here: *structured output*.
    We give Gemini a form with fixed fields (score, verdict, gaps...) and it must fill it in.
-   That's why the result can go straight into a table.
-4. **The prompt** — the instructions. This is where your product judgement lives: honesty rules,
-   "never invent a metric", tone of outreach. Edit it and watch the output change.
-5. **Talking to Gemini** — one function that sends CV + criteria + JD and gets a `FitReport` back.
-6. **Reading an uploaded CV** — turns a PDF, Word or text file into plain text.
-7. **Each visitor's private memory** — `st.session_state` is a notebook Streamlit keeps for each
+   `FitReport` is the form for one job in detail; `JobMatches` is a short form for many jobs.
+4. **The prompts** — the instructions. This is where your product judgement lives: honesty rules,
+   "never invent a metric", how strict the alerts should be. Edit them and watch the output change.
+5. **Talking to Gemini** — one helper that sends a prompt and gets the form back. Alerts score
+   all jobs in ONE call, which saves your free quota.
+6. **Fetching jobs** — asks JSearch and Adzuna for jobs, turns both into the same simple format,
+   and removes duplicates.
+7. **Reading an uploaded CV** — turns a PDF, Word or text file into plain text.
+8. **Each visitor's private memory** — `st.session_state` is a notebook Streamlit keeps for each
    browser tab. That's what keeps one visitor's CV away from another's.
-8. **The web page** — three tabs. Streamlit reruns the whole file top-to-bottom every time you
+9. **The web page** — four tabs. Streamlit reruns the whole file top-to-bottom every time you
    click something; that's normal.
 
 ## Learn by changing it — do these in order
@@ -109,7 +147,7 @@ The file has 8 numbered sections:
    Save the file, refresh the browser, analyse the same JD. Did the verdict change?
 2. **Add a field.** In section 3 add
    `interview_questions: list[str] = Field(description="5 likely interview questions for this role")`.
-   Then in section 8, after the recruiter note, show it:
+   Then in section 9, after the recruiter note, show it:
    ```python
    st.markdown("**Likely interview questions**")
    for q in report.interview_questions:
